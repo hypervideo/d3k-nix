@@ -1,0 +1,55 @@
+name: Update d3k
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Weekly on Monday at 6 AM UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Check for updates
+        id: update
+        run: |
+          nix shell nixpkgs#curl nixpkgs#jq nixpkgs#nodejs_22 nixpkgs#prefetch-npm-deps \
+            -c bash scripts/update-d3k.sh
+
+      - name: Build updated package
+        if: steps.update.outputs.UPDATED == 'true'
+        run: nix build
+
+      - name: Create Pull Request
+        if: steps.update.outputs.UPDATED == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.update.outputs.VERSION }}"
+          BRANCH="update-d3k-${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add default.nix package-lock.json
+          git commit -m "chore: update d3k to ${VERSION}"
+          git push origin "$BRANCH"
+
+          # Create PR only if one doesn't already exist for this branch
+          if ! gh pr list --head "$BRANCH" --json number --jq '.[0].number' | grep -q .; then
+            gh pr create \
+              --title "chore: update d3k to ${VERSION}" \
+              --body "Automated update of d3k to version ${VERSION}." \
+              --base main
+          fi
