@@ -8,14 +8,14 @@
 }:
 
 let
-  version = "0.0.176";
+  version = "0.0.177";
 
   srcWithLock = runCommand "d3k-src-with-lock" { nativeBuildInputs = [ jq ]; } ''
     mkdir -p $out
     tar -xzf ${
       fetchurl {
         url = "https://registry.npmjs.org/dev3000/-/dev3000-${version}.tgz";
-        hash = "sha256-6LXyStSLjQsimGe8zb1gnvfrHSE192+ctFH0VZ49u50=";
+        hash = "sha256-f3dUdqnk5QDSGv20m7zDTo7C3RNiPqn1uPDwtwbwlQk=";
       }
     } -C $out --strip-components=1
     jq 'del(.devDependencies)' $out/package.json > $out/package.json.tmp
@@ -30,7 +30,7 @@ buildNpmPackage {
 
   src = srcWithLock;
 
-  npmDepsHash = "sha256-dPU4e9wzmvEFYanDRzZtaeWPoejKEVZ2yoshAFE6tts=";
+  npmDepsHash = "sha256-Ha7oWGFaRO3PFFDz7WcsF0kCnjkKFmghDLwYwvQl1gU=";
 
   dontNpmBuild = true;
   nodejs = nodejs_22;
